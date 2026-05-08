@@ -1,0 +1,1552 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Huffman Coding Visualizer - CLO Tool</title>
+  <style>
+    :root{
+      --bg:#070c14;
+      --bg2:#0f1827;
+      --card:#0f1a2b;
+      --card2:#132038;
+      --text:#e9f0ff;
+      --muted:#a8b6d3;
+      --accent:#6aa9ff;
+      --ok:#55d39a;
+      --warn:#ffd166;
+      --danger:#ff6b88;
+      --line:rgba(255,255,255,0.16);
+      --shadow:0 18px 36px rgba(0,0,0,0.35);
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif;
+      background:
+        radial-gradient(1200px 500px at 80% -10%, rgba(106,169,255,0.22), transparent 65%),
+        radial-gradient(900px 480px at -10% 20%, rgba(85,211,154,0.14), transparent 58%),
+        linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
+    }
+
+    .wrap{
+      max-width:1480px;
+      margin:0 auto;
+      padding:18px;
+      display:grid;
+      grid-template-columns:420px 1fr;
+      gap:14px;
+    }
+
+    @media (max-width:980px){
+      .wrap{ grid-template-columns:1fr; }
+    }
+
+    .card{
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:16px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+
+    .card h2{
+      margin:0;
+      font-size:14px;
+      letter-spacing:0.35px;
+      text-transform:uppercase;
+      color:#d8e6ff;
+      padding:10px 12px;
+      border-bottom:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.03);
+    }
+
+    .controls{ padding:12px; }
+    .row{ display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:9px; }
+    label{ display:block; font-size:12px; color:var(--muted); margin-bottom:5px; }
+
+    input[type="text"], textarea, input[type="range"], button, select{
+      width:100%;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,0.14);
+      background:rgba(11,19,33,0.8);
+      color:var(--text);
+      padding:10px 12px;
+      font-size:13px;
+      outline:none;
+    }
+
+    textarea{ min-height:62px; resize:vertical; }
+    input[type="range"]{ padding:9px 0; }
+
+    button{
+      cursor:pointer;
+      font-weight:700;
+      transition: transform .08s ease, background .15s ease;
+      background:rgba(106,169,255,0.16);
+    }
+
+    button:hover{ background:rgba(106,169,255,0.28); }
+    button:active{ transform:scale(0.99); }
+    button.secondary{ background:rgba(255,255,255,0.09); }
+    button.secondary:hover{ background:rgba(255,255,255,0.15); }
+    button.warn{ background:rgba(255,209,102,0.18); }
+    button.warn:hover{ background:rgba(255,209,102,0.26); }
+    button.guide{ background:rgba(85,211,154,0.2); }
+    button.guide:hover{ background:rgba(85,211,154,0.3); }
+
+    .btnRow{ display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:10px; }
+    @media (max-width:980px){ .btnRow{ grid-template-columns:repeat(3,1fr); } }
+    .guideRow{ grid-template-columns:repeat(3,1fr); }
+
+    .presetRow{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:7px; }
+
+    .statGrid{ display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:10px; }
+    .stat{
+      border:1px solid rgba(255,255,255,0.11);
+      border-radius:12px;
+      padding:8px 10px;
+      background:rgba(0,0,0,0.17);
+      font-size:12px;
+      color:var(--muted);
+    }
+    .stat b{ display:block; color:var(--text); font-size:15px; margin-top:2px; }
+
+    .subtle{ margin-top:8px; font-size:12px; color:var(--muted); line-height:1.4; }
+
+    .viz{ padding:12px; display:grid; gap:10px; }
+
+    .legend{ display:flex; flex-wrap:wrap; gap:10px; font-size:12px; color:var(--muted); }
+    .dot{ width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:6px; border:1px solid rgba(255,255,255,0.16); }
+
+    .panes{ display:grid; grid-template-columns:1.6fr 1fr; gap:10px; }
+    @media (max-width:1180px){ .panes{ grid-template-columns:1fr; } }
+
+    .panel{
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:14px;
+      background:rgba(0,0,0,0.18);
+      overflow:hidden;
+    }
+
+    .panel h3{
+      margin:0;
+      font-size:12px;
+      letter-spacing:0.35px;
+      text-transform:uppercase;
+      color:#cfdefa;
+      padding:8px 10px;
+      border-bottom:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.03);
+    }
+
+    svg{
+      width:100%;
+      height:540px;
+      display:block;
+      background:rgba(0,0,0,0.2);
+    }
+
+    .nodeCircle, .treeEdge, .edgeLabel, .nodeText, .heapCell {
+      transition: all 220ms ease;
+    }
+
+    .nodeGroup{ transition: transform 260ms ease, opacity 220ms ease; transform-origin:center center; }
+    .nodeGroup.enter .nodeCircle{ animation: nodePop 280ms ease; }
+    .nodeGroup.focus .nodeCircle{ animation: nodePulse 900ms ease-in-out infinite; }
+    .treeEdge.enter{
+      stroke-dasharray:260;
+      stroke-dashoffset:260;
+      animation: edgeDraw 340ms ease forwards;
+    }
+    .treeEdge.focus{ stroke:rgba(255,107,136,0.78); stroke-width:3; }
+
+    @keyframes nodePop{
+      0%{ transform:scale(0.4); opacity:0.2; }
+      70%{ transform:scale(1.1); opacity:1; }
+      100%{ transform:scale(1); opacity:1; }
+    }
+    @keyframes nodePulse{
+      0%,100%{ filter:drop-shadow(0 0 0 rgba(255,107,136,0)); }
+      50%{ filter:drop-shadow(0 0 10px rgba(255,107,136,0.9)); }
+    }
+    @keyframes edgeDraw{
+      to{ stroke-dashoffset:0; }
+    }
+
+    .treeEdge{ stroke:var(--line); stroke-width:2; }
+    .edgeLabel{ fill:#dfe9ff; font-size:12px; font-weight:700; }
+    .nodeCircle{ stroke:rgba(255,255,255,0.3); stroke-width:2; }
+    .nodeText{ fill:#eff5ff; font-size:11px; font-weight:700; user-select:none; pointer-events:none; }
+
+    .heapStrip{ border-top:1px solid rgba(255,255,255,0.1); padding:9px; min-height:88px; }
+    .heapTitle{ font-size:12px; color:var(--muted); margin-bottom:7px; }
+    .heapRow{ display:flex; flex-wrap:wrap; gap:7px; }
+    .heapCell{
+      border:1px solid rgba(255,255,255,0.16);
+      border-radius:10px;
+      padding:5px 8px;
+      background:rgba(255,255,255,0.06);
+      font-size:11px;
+      color:#dce6fb;
+    }
+    .heapCell.min{ background:rgba(255,107,136,0.2); border-color:rgba(255,107,136,0.4); }
+    .heapCell.new{ background:rgba(85,211,154,0.2); border-color:rgba(85,211,154,0.4); }
+    .heapCell.focus{ animation: heapPulse 900ms ease-in-out infinite; }
+
+    @keyframes heapPulse{
+      0%,100%{ box-shadow:0 0 0 rgba(106,169,255,0); }
+      50%{ box-shadow:0 0 10px rgba(106,169,255,0.8); }
+    }
+
+    .ioWrap{ padding:10px; display:grid; gap:8px; }
+    .ioOut{
+      min-height:38px;
+      border:1px solid rgba(255,255,255,0.1);
+      background:rgba(255,255,255,0.03);
+      border-radius:10px;
+      padding:8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size:12px;
+      color:#dbe8ff;
+      line-height:1.35;
+      word-break:break-all;
+    }
+
+    .mono{
+      margin:0;
+      border-top:1px solid rgba(255,255,255,0.08);
+      background:#0a1322;
+      max-height:250px;
+      overflow:auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size:12px;
+      line-height:1.45;
+      padding:8px;
+    }
+    .codeLine{
+      padding:2px 6px;
+      border-radius:6px;
+      color:#d6e4ff;
+      white-space:pre;
+    }
+    .codeLine .ln{ color:#8aa2cf; display:inline-block; width:24px; }
+    .codeLine.active{ background:rgba(255,209,102,0.26); color:#fff; }
+
+    .explain{
+      border-top:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.03);
+      padding:9px;
+      font-size:12px;
+      color:#dce8ff;
+      min-height:52px;
+      line-height:1.35;
+      white-space:pre-line;
+    }
+
+    .guideInline{
+      border:1px dashed rgba(106,169,255,0.5);
+      border-radius:10px;
+      background:rgba(106,169,255,0.08);
+      color:#d8e7ff;
+      padding:7px 8px;
+      min-height:28px;
+      white-space:pre-line;
+      opacity:0;
+      transform:translateY(-3px);
+      transition:opacity 180ms ease, transform 180ms ease;
+    }
+    .guideInline.show{
+      opacity:1;
+      transform:translateY(0);
+    }
+
+    .calloutBox{ fill:rgba(255,255,255,0.95); stroke:rgba(14,22,35,0.45); stroke-width:1.2; }
+    .calloutText{ fill:#0e1a2c; font-size:11px; font-weight:700; }
+    .calloutTail{ fill:rgba(255,255,255,0.95); }
+
+    .historyWrap{ max-height:225px; overflow:auto; border-top:1px solid rgba(255,255,255,0.08); }
+    table{ width:100%; border-collapse:collapse; font-size:12px; }
+    th,td{ border-bottom:1px solid rgba(255,255,255,0.08); padding:7px 8px; text-align:left; }
+    thead th{ position:sticky; top:0; background:#0d1728; z-index:1; color:#c4d5f8; }
+    tr:hover td{ background:rgba(106,169,255,0.14); }
+    tr.active td{ background:rgba(255,209,102,0.2); }
+
+    .pill{
+      display:inline-block;
+      border-radius:999px;
+      padding:4px 8px;
+      font-size:11px;
+      border:1px solid rgba(255,255,255,0.15);
+      background:rgba(255,255,255,0.05);
+      color:#d4e2ff;
+    }
+
+    details.edu{
+      margin-top:10px;
+      border:1px solid rgba(255,255,255,0.12);
+      border-radius:12px;
+      padding:9px 10px;
+      background:rgba(0,0,0,0.16);
+    }
+    details.edu summary{
+      cursor:pointer;
+      font-weight:700;
+      color:#d9e7ff;
+      font-size:13px;
+    }
+    details.edu p, details.edu li{
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.45;
+    }
+
+    .keyBox{
+      border-left:3px solid var(--warn);
+      background:rgba(255,209,102,0.09);
+      padding:8px;
+      border-radius:8px;
+      margin-top:8px;
+      font-size:12px;
+      color:#f6e2a8;
+    }
+
+    .cloGrid{ display:grid; grid-template-columns:1fr; gap:10px; }
+    .chartBox{ border:1px solid rgba(255,255,255,0.11); border-radius:10px; padding:8px; background:rgba(255,255,255,0.03); }
+    #growthSvg{ height:220px; width:100%; display:block; background:rgba(0,0,0,0.2); border-radius:8px; }
+    .mini{ font-size:11px; color:var(--muted); }
+
+    .footer{ font-size:11px; color:var(--muted); padding:8px 0 2px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h2>Huffman Coding - Controls</h2>
+      <div class="controls">
+        <label for="freqInput">Custom Input (format: A:5,B:9,C:12,D:13,E:16,F:45)</label>
+        <textarea id="freqInput">A:5,B:9,C:12,D:13,E:16,F:45</textarea>
+
+        <div class="presetRow">
+          <button class="secondary" id="preset1">Preset 1</button>
+          <button class="secondary" id="preset2">Preset 2</button>
+          <button class="secondary" id="preset3">Preset 3</button>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <div>
+            <label for="nScale">Input Scale n</label>
+            <input id="nScale" type="range" min="4" max="18" step="1" value="6" />
+          </div>
+          <div>
+            <label for="speed">Speed <span id="speedLabel">1.00x</span></label>
+            <input id="speed" type="range" min="0.25" max="4" step="0.25" value="1" />
+          </div>
+        </div>
+
+        <div class="btnRow">
+          <button id="build">Build Steps</button>
+          <button id="step">Step</button>
+          <button id="play">Play</button>
+          <button class="warn" id="pause">Pause</button>
+          <button class="secondary" id="reset">Reset</button>
+        </div>
+
+        <div class="btnRow guideRow">
+          <button class="guide" id="guideStart">Complete Step-by-Step</button>
+          <button id="guideNext">Next</button>
+          <button class="secondary" id="guideStop">Exit Guide</button>
+        </div>
+
+        <div class="statGrid">
+          <div class="stat">Step <b id="stepCount">0 / 0</b></div>
+          <div class="stat">Status <b id="status">Idle</b></div>
+          <div class="stat">extract-min <b id="extractCount">0</b></div>
+          <div class="stat">insert <b id="insertCount">0</b></div>
+          <div class="stat">merge ops <b id="mergeCount">0</b></div>
+          <div class="stat">min-search cmp <b id="cmpCount">0</b></div>
+        </div>
+
+        <div class="subtle">
+          <span class="pill">CLO-1</span>
+          <span class="pill">CLO-2</span>
+          <span class="pill">CLO-3</span>
+          <div style="margin-top:7px">Paradigm: <b>Greedy</b>. Two smallest frequencies are merged at each step.</div>
+        </div>
+
+        <details class="edu" open>
+          <summary>Algorithm Overview</summary>
+          <p>Huffman coding is a lossless compression method. Frequent symbols get shorter bit codes, rare symbols get longer codes.</p>
+          <p>It uses a min-heap (priority queue): repeatedly extract two smallest nodes, merge them, and push the merged node back.</p>
+          <div class="keyBox">Common mistake: assigning codes before tree construction finishes. Codes are only valid after the final root is built.</div>
+        </details>
+
+        <details class="edu">
+          <summary>Worked Example</summary>
+          <p>Input: A:5, B:9, C:12, D:13, E:16, F:45.</p>
+          <ol>
+            <li>Merge A(5)+B(9)=14</li>
+            <li>Merge C(12)+D(13)=25</li>
+            <li>Merge 14+E(16)=30</li>
+            <li>Merge 25+30=55</li>
+            <li>Merge F(45)+55=100 (root)</li>
+          </ol>
+          <p>Traverse left as 0 and right as 1 to get final codes.</p>
+        </details>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Visualization + Learning Panels</h2>
+      <div class="viz">
+        <div class="legend">
+          <span><i class="dot" style="background:#6aa9ff"></i>Leaf</span>
+          <span><i class="dot" style="background:#ff6b88"></i>Currently extracted minimums</span>
+          <span><i class="dot" style="background:#ffd166"></i>Merged/internal node</span>
+          <span><i class="dot" style="background:#55d39a"></i>Final root</span>
+        </div>
+
+        <div class="panes">
+          <div class="panel">
+            <h3>Huffman Tree Construction</h3>
+            <svg id="treeSvg" viewBox="0 0 1120 540" preserveAspectRatio="xMidYMid meet"></svg>
+            <div class="heapStrip">
+              <div class="heapTitle">Priority Queue (min-heap view)</div>
+              <div id="heapRow" class="heapRow"></div>
+              <div id="heapGuideNote" class="mini guideInline"></div>
+            </div>
+          </div>
+
+          <div style="display:grid; gap:10px; align-content:start;">
+            <div class="panel">
+              <h3>Pseudocode</h3>
+              <pre id="pseudocode" class="mono"></pre>
+              <div id="explain" class="explain">Build steps to begin tracing Huffman coding.</div>
+            </div>
+
+            <div class="panel">
+              <h3>Encode / Decode</h3>
+              <div class="ioWrap">
+                <label for="encodeInput">Text to encode (use symbols from input)</label>
+                <input id="encodeInput" type="text" value="FACE" />
+                <button id="encodeBtn">Encode</button>
+                <div id="encodedOut" class="ioOut"></div>
+                <label for="decodeInput">Bits to decode</label>
+                <input id="decodeInput" type="text" placeholder="Paste bit-string here" />
+                <button id="decodeBtn" class="secondary">Decode</button>
+                <div id="decodedOut" class="ioOut"></div>
+                <div id="ioGuideNote" class="mini guideInline"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>History (Last 25 steps, click row to jump)</h3>
+          <div class="historyWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Action</th>
+                  <th>Heap</th>
+                  <th>Explanation</th>
+                </tr>
+              </thead>
+              <tbody id="histBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="cloGrid">
+          <div class="panel">
+            <h3>CLO-1: Complexity Analysis and Growth Curves</h3>
+            <div class="ioWrap">
+              <div class="mini">Huffman with min-heap runs in O(n log n). Chart compares actual key operations vs theoretical n log2(n), plus fixed-length baseline.</div>
+              <div class="chartBox"><svg id="growthSvg" viewBox="0 0 760 220" preserveAspectRatio="none"></svg></div>
+              <div class="mini">Worst-case style preset: nearly uniform frequencies produce deeper average code lengths than highly skewed distributions.</div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>CLO-2: Search/Sorting Role (Heap Impact Demo)</h3>
+            <div class="ioWrap">
+              <label><input type="checkbox" id="disableHeap" /> Disable min-heap order (use FIFO queue for merges)</label>
+              <button id="impactBtn" class="secondary">Run Impact Comparison</button>
+              <div id="impactOut" class="ioOut"></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>CLO-3: Greedy Choice Demonstration</h3>
+            <div class="ioWrap">
+              <div class="mini">Greedy rule: always merge the two smallest frequencies first. Compare against a bad strategy (merge two largest first).</div>
+              <button id="greedyBtn" class="secondary">Show Greedy vs Bad Strategy</button>
+              <div id="greedyOut" class="ioOut"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer">Single-file implementation: HTML + CSS + Vanilla JS + SVG only.</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const CODE = [
+    { n:1, t:"HUFFMAN(F):" , tip:"Input set F contains symbols with frequencies."},
+    { n:2, t:"Q <- buildMinHeap(F)", tip:"Create priority queue ordered by minimum frequency."},
+    { n:3, t:"while size(Q) > 1:", tip:"Repeat until one tree remains."},
+    { n:4, t:"  x <- extractMin(Q)", tip:"Take smallest node."},
+    { n:5, t:"  y <- extractMin(Q)", tip:"Take second smallest node."},
+    { n:6, t:"  z <- newNode(freq=x.freq+y.freq)", tip:"Merge two subtrees under new internal node z."},
+    { n:7, t:"  z.left <- x; z.right <- y; insert(Q, z)", tip:"Push merged node back into heap."},
+    { n:8, t:"return extractMin(Q)", tip:"Remaining node is root of Huffman tree."},
+    { n:9, t:"assignCodes(root, path='')", tip:"Traverse edges: left=0, right=1."},
+    { n:10,t:"if leaf: code[symbol] <- path", tip:"Store final bit-code for each symbol."}
+  ];
+
+  const els = {
+    freqInput: document.getElementById("freqInput"),
+    nScale: document.getElementById("nScale"),
+    speed: document.getElementById("speed"),
+    speedLabel: document.getElementById("speedLabel"),
+    build: document.getElementById("build"),
+    step: document.getElementById("step"),
+    play: document.getElementById("play"),
+    pause: document.getElementById("pause"),
+    reset: document.getElementById("reset"),
+    guideStart: document.getElementById("guideStart"),
+    guideNext: document.getElementById("guideNext"),
+    guideStop: document.getElementById("guideStop"),
+    preset1: document.getElementById("preset1"),
+    preset2: document.getElementById("preset2"),
+    preset3: document.getElementById("preset3"),
+    treeSvg: document.getElementById("treeSvg"),
+    heapRow: document.getElementById("heapRow"),
+    stepCount: document.getElementById("stepCount"),
+    status: document.getElementById("status"),
+    extractCount: document.getElementById("extractCount"),
+    insertCount: document.getElementById("insertCount"),
+    mergeCount: document.getElementById("mergeCount"),
+    cmpCount: document.getElementById("cmpCount"),
+    pseudocode: document.getElementById("pseudocode"),
+    explain: document.getElementById("explain"),
+    histBody: document.getElementById("histBody"),
+    encodeInput: document.getElementById("encodeInput"),
+    encodeBtn: document.getElementById("encodeBtn"),
+    decodeInput: document.getElementById("decodeInput"),
+    decodeBtn: document.getElementById("decodeBtn"),
+    encodedOut: document.getElementById("encodedOut"),
+    decodedOut: document.getElementById("decodedOut"),
+    heapGuideNote: document.getElementById("heapGuideNote"),
+    ioGuideNote: document.getElementById("ioGuideNote"),
+    growthSvg: document.getElementById("growthSvg"),
+    disableHeap: document.getElementById("disableHeap"),
+    impactBtn: document.getElementById("impactBtn"),
+    impactOut: document.getElementById("impactOut"),
+    greedyBtn: document.getElementById("greedyBtn"),
+    greedyOut: document.getElementById("greedyOut")
+  };
+
+  let symbols = [];
+  let allNodes = {};
+  let steps = [];
+  let stepIndex = 0;
+  let status = "Idle";
+  let playing = false;
+  let playToken = 0;
+  let rootId = null;
+  let codeMap = {};
+  let history = [];
+  let guidedMode = false;
+  let prevNodePos = {};
+
+  function setStatus(s){ status = s; els.status.textContent = s; }
+  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+  function stepMeta(action){
+    if (action === "insert"){
+      return {
+        focus: "heap",
+        why: "Every symbol must enter the priority queue so the algorithm can repeatedly pick smallest frequencies.",
+        relevance: "Building this queue is the base of the O(n log n) greedy process.",
+        comment: "Queue update: inserted a symbol node."
+      };
+    }
+    if (action === "extract"){
+      return {
+        focus: "heap",
+        why: "Huffman's greedy-choice property requires selecting the two minimum-frequency nodes.",
+        relevance: "Choosing minima first guarantees optimal prefix-code length.",
+        comment: "Extracted one of the current minimum nodes."
+      };
+    }
+    if (action === "merge"){
+      return {
+        focus: "tree",
+        why: "Two minimum nodes are merged into a parent whose weight is their sum.",
+        relevance: "This creates one level in the coding tree and preserves greedy optimality.",
+        comment: "Merged two minima into a new internal node."
+      };
+    }
+    if (action === "insertMerged"){
+      return {
+        focus: "heap",
+        why: "The new subtree must re-enter the queue for future comparisons.",
+        relevance: "Keeps candidate subtrees available until only one root remains.",
+        comment: "Reinserted merged node back into queue."
+      };
+    }
+    if (action === "done"){
+      return {
+        focus: "tree",
+        why: "The queue now has one node only, which is the Huffman tree root.",
+        relevance: "Tree construction ends; next stage is assigning bit codes by traversal.",
+        comment: "Final root reached: tree construction complete."
+      };
+    }
+    if (action === "assignCodes"){
+      return {
+        focus: "tree",
+        why: "Codes are generated only after the complete tree exists.",
+        relevance: "Each left edge contributes 0 and right edge contributes 1 to a symbol code.",
+        comment: "Traverse root-to-leaf paths to assign each symbol code."
+      };
+    }
+    if (action === "readyEncode"){
+      return {
+        focus: "io",
+        why: "With code table ready, text can be encoded and bits can be decoded.",
+        relevance: "This is the practical compression/decompression stage.",
+        comment: "Use encode/decode panel with generated Huffman codes."
+      };
+    }
+    return {
+      focus: "tree",
+      why: "The algorithm is progressing to the next valid state.",
+      relevance: "Each state contributes to constructing or using the Huffman tree.",
+      comment: "Next Huffman step."
+    };
+  }
+
+  function guideNarration(st){
+    if (!st) return "";
+    return [
+      `What: ${st.explain}`,
+      `Why now: ${st.why}`,
+      `Relevance: ${st.relevance}`
+    ].join("\n");
+  }
+
+  function renderPseudo(active){
+    els.pseudocode.innerHTML = "";
+    CODE.forEach(line => {
+      const div = document.createElement("div");
+      div.className = "codeLine" + (line.n === active ? " active" : "");
+      div.title = line.tip;
+      div.innerHTML = `<span class="ln">${line.n}.</span>${line.t}`;
+      els.pseudocode.appendChild(div);
+    });
+
+    if (active){
+      const activeEl = els.pseudocode.querySelector(".codeLine.active");
+      if (activeEl){ activeEl.scrollIntoView({ block:"nearest", behavior:"smooth" }); }
+    }
+  }
+
+  function parseInput(str){
+    const out = [];
+    const seen = new Set();
+    const parts = str.split(",").map(x => x.trim()).filter(Boolean);
+    for (const p of parts){
+      const seg = p.split(":").map(x => x.trim());
+      if (seg.length !== 2) continue;
+      const ch = seg[0];
+      const freq = Number(seg[1]);
+      if (!ch || !Number.isFinite(freq) || freq <= 0 || seen.has(ch)) continue;
+      seen.add(ch);
+      out.push({ char: ch, freq });
+    }
+    return out;
+  }
+
+  function scaleFromSlider(base){
+    const target = Number(els.nScale.value);
+    if (base.length >= target) return base.slice(0, target);
+    const arr = base.slice();
+    const chars = "GHIJKLMNOPQRSTUVWXYZ";
+    let idx = 0;
+    while (arr.length < target){
+      arr.push({ char: chars[idx] || `X${idx}`, freq: 2 + ((idx * 7) % 19) });
+      idx += 1;
+    }
+    return arr;
+  }
+
+  function deepCopy(obj){ return JSON.parse(JSON.stringify(obj)); }
+
+  function buildSteps(inputSymbols, useHeap = true){
+    const nodes = {};
+    let uid = 0;
+    const heap = [];
+    const madeSteps = [];
+    let extractOps = 0;
+    let insertOps = 0;
+    let mergeOps = 0;
+    let cmpOps = 0;
+
+    const pushStep = (line, action, explain, selected = [], newNodeId = null) => {
+      const meta = stepMeta(action);
+      madeSteps.push({
+        line,
+        action,
+        explain,
+        why: meta.why,
+        relevance: meta.relevance,
+        focus: meta.focus,
+        comment: meta.comment,
+        selected: selected.slice(),
+        newNodeId,
+        heapIds: heap.slice(),
+        extractOps,
+        insertOps,
+        mergeOps,
+        cmpOps,
+        snapshotRoot: heap.length === 1 ? heap[0] : null
+      });
+    };
+
+    const sortHeap = () => {
+      if (!useHeap) return;
+      heap.sort((a,b) => {
+        cmpOps += 1;
+        return nodes[a].freq - nodes[b].freq;
+      });
+    };
+
+    for (const s of inputSymbols){
+      const id = `n${++uid}`;
+      nodes[id] = { id, char: s.char, freq: s.freq, left: null, right: null };
+      heap.push(id);
+      insertOps += 1;
+      sortHeap();
+      pushStep(2, "insert", `Insert ${s.char}(${s.freq}) into priority queue.`, [id], id);
+    }
+
+    while (heap.length > 1){
+      if (useHeap){ cmpOps += Math.max(0, heap.length - 1); }
+      sortHeap();
+      const x = useHeap ? heap.shift() : heap.shift();
+      extractOps += 1;
+      pushStep(4, "extract", `Extract-min x = ${labelOf(nodes, x)}.`, [x], null);
+
+      if (useHeap){ cmpOps += Math.max(0, heap.length - 1); }
+      sortHeap();
+      const y = useHeap ? heap.shift() : heap.shift();
+      extractOps += 1;
+      pushStep(5, "extract", `Extract-min y = ${labelOf(nodes, y)}.`, [x,y], null);
+
+      const z = `n${++uid}`;
+      nodes[z] = {
+        id: z,
+        char: null,
+        freq: nodes[x].freq + nodes[y].freq,
+        left: x,
+        right: y
+      };
+      mergeOps += 1;
+      pushStep(6, "merge", `Create merged node z with freq ${nodes[z].freq} from ${labelOf(nodes,x)} + ${labelOf(nodes,y)}.`, [x,y,z], z);
+
+      heap.push(z);
+      insertOps += 1;
+      sortHeap();
+      pushStep(7, "insertMerged", `Insert merged node ${nodes[z].freq} back into queue.`, [z], z);
+    }
+
+    const finalRoot = heap[0] || null;
+    if (finalRoot){
+      pushStep(8, "done", `Final root built with total frequency ${nodes[finalRoot].freq}.`, [finalRoot], finalRoot);
+      pushStep(9, "assignCodes", "Assign 0/1 codes by traversing each root-to-leaf path.", [finalRoot], finalRoot);
+      pushStep(10, "readyEncode", "Codes are ready. Encode text to bits and decode bits back to text.", [finalRoot], finalRoot);
+    }
+
+    return {
+      nodes,
+      steps: madeSteps,
+      rootId: finalRoot
+    };
+  }
+
+  function labelOf(nodes, id){
+    const n = nodes[id];
+    if (!n) return "?";
+    return n.char ? `${n.char}(${n.freq})` : `*(${n.freq})`;
+  }
+
+  function getLeafCount(nodeId){
+    const n = allNodes[nodeId];
+    if (!n) return 1;
+    if (!n.left && !n.right) return 1;
+    return getLeafCount(n.left) + getLeafCount(n.right);
+  }
+
+  function layoutTree(rootId, x0, x1, y, pos, edges){
+    const n = allNodes[rootId];
+    if (!n) return;
+    const x = (x0 + x1) / 2;
+    pos[rootId] = { x, y };
+
+    if (!n.left && !n.right) return;
+    const leftLeaves = getLeafCount(n.left);
+    const rightLeaves = getLeafCount(n.right);
+    const total = Math.max(1, leftLeaves + rightLeaves);
+    const split = x0 + ((x1 - x0) * (leftLeaves / total));
+
+    if (n.left){
+      edges.push({ from: rootId, to: n.left, bit: "0" });
+      layoutTree(n.left, x0, split, y + 78, pos, edges);
+    }
+    if (n.right){
+      edges.push({ from: rootId, to: n.right, bit: "1" });
+      layoutTree(n.right, split, x1, y + 78, pos, edges);
+    }
+  }
+
+  function draw(){
+    const st = steps[stepIndex] || null;
+    const selected = new Set(st ? st.selected : []);
+    const heapIds = st ? st.heapIds : [];
+
+    while (els.treeSvg.firstChild) els.treeSvg.removeChild(els.treeSvg.firstChild);
+
+    if (!st){
+      const t = document.createElementNS("http://www.w3.org/2000/svg","text");
+      t.setAttribute("x","560");
+      t.setAttribute("y","260");
+      t.setAttribute("text-anchor","middle");
+      t.setAttribute("fill","#b4c6ea");
+      t.setAttribute("font-size","22");
+      t.textContent = "Build steps to begin Huffman tree construction";
+      els.treeSvg.appendChild(t);
+      renderHeapRow([]);
+      setGuideNotes(null);
+      return;
+    }
+
+    const roots = heapIds.slice();
+    if (!roots.length && st.snapshotRoot) roots.push(st.snapshotRoot);
+
+    if (!roots.length){
+      renderHeapRow([]);
+      setGuideNotes(st);
+      return;
+    }
+
+    const margin = 24;
+    let cursor = margin;
+    const totalLeaves = roots.reduce((a,r) => a + getLeafCount(r), 0);
+    const usable = 1120 - margin * 2;
+    const minGroup = 120;
+
+    const pos = {};
+    const edges = [];
+
+    for (const rid of roots){
+      const leaves = getLeafCount(rid);
+      const w = Math.max(minGroup, usable * (leaves / Math.max(1,totalLeaves)));
+      layoutTree(rid, cursor, Math.min(1120 - margin, cursor + w), 64, pos, edges);
+      cursor += w + 10;
+    }
+
+    edges.forEach(e => {
+      const a = pos[e.from];
+      const b = pos[e.to];
+      if (!a || !b) return;
+      const line = document.createElementNS("http://www.w3.org/2000/svg","line");
+      line.setAttribute("x1", a.x);
+      line.setAttribute("y1", a.y + 21);
+      line.setAttribute("x2", b.x);
+      line.setAttribute("y2", b.y - 21);
+      line.setAttribute("class", "treeEdge");
+      if (st.newNodeId && (e.from === st.newNodeId || e.to === st.newNodeId)) line.classList.add("enter");
+      if (selected.has(e.from) || selected.has(e.to)) line.classList.add("focus");
+      els.treeSvg.appendChild(line);
+
+      const bit = document.createElementNS("http://www.w3.org/2000/svg","text");
+      bit.setAttribute("x", (a.x + b.x) / 2 + (e.bit === "0" ? -10 : 10));
+      bit.setAttribute("y", (a.y + b.y) / 2 - 4);
+      bit.setAttribute("class", "edgeLabel");
+      bit.textContent = e.bit;
+      els.treeSvg.appendChild(bit);
+    });
+
+    Object.keys(pos).forEach(id => {
+      const n = allNodes[id];
+      const p = pos[id];
+      const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+      g.setAttribute("class", "nodeGroup");
+      if (st.newNodeId === id) g.classList.add("enter");
+      if (selected.has(id)) g.classList.add("focus");
+
+      const circle = document.createElementNS("http://www.w3.org/2000/svg","circle");
+      circle.setAttribute("cx", p.x);
+      circle.setAttribute("cy", p.y);
+      circle.setAttribute("r", "21");
+      circle.setAttribute("class", "nodeCircle");
+
+      const isFinal = st.snapshotRoot && st.snapshotRoot === id;
+      const isLeaf = !!n.char;
+      let fill = "#ffd166";
+      if (isLeaf) fill = "#6aa9ff";
+      if (selected.has(id)) fill = "#ff6b88";
+      if (isFinal) fill = "#55d39a";
+      circle.setAttribute("fill", fill);
+      g.appendChild(circle);
+
+      const text = document.createElementNS("http://www.w3.org/2000/svg","text");
+      text.setAttribute("x", p.x);
+      text.setAttribute("y", p.y + 4);
+      text.setAttribute("text-anchor", "middle");
+      text.setAttribute("class", "nodeText");
+      text.textContent = n.char ? `${n.char}:${n.freq}` : `${n.freq}`;
+      g.appendChild(text);
+
+      const prev = prevNodePos[id];
+      if (prev){
+        const dx = prev.x - p.x;
+        const dy = prev.y - p.y;
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1){
+          g.style.transform = `translate(${dx}px, ${dy}px)`;
+          requestAnimationFrame(() => {
+            g.style.transform = "translate(0px, 0px)";
+          });
+        }
+      }
+
+      els.treeSvg.appendChild(g);
+    });
+
+    prevNodePos = pos;
+
+    drawTreeCallout(st, pos);
+
+    renderHeapRow(heapIds, selected, st.newNodeId);
+    setGuideNotes(st);
+  }
+
+  function splitTextLines(text, maxLen = 34){
+    const words = (text || "").split(" ");
+    const lines = [];
+    let line = "";
+    for (const w of words){
+      if (!line || (line.length + 1 + w.length) <= maxLen){
+        line = line ? `${line} ${w}` : w;
+      } else {
+        lines.push(line);
+        line = w;
+      }
+    }
+    if (line) lines.push(line);
+    return lines.slice(0, 3);
+  }
+
+  function drawTreeCallout(st, pos){
+    if (!st || st.focus !== "tree") return;
+    const anchorId = st.newNodeId || st.selected[st.selected.length - 1] || st.snapshotRoot;
+    const p = anchorId ? pos[anchorId] : null;
+    if (!p) return;
+
+    const lines = splitTextLines(st.comment || st.explain);
+    const boxW = 260;
+    const boxH = 18 + lines.length * 16;
+    const x = Math.max(10, Math.min(1120 - boxW - 10, p.x + 24));
+    const y = Math.max(12, p.y - boxH - 20);
+
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+    const box = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    box.setAttribute("x", x);
+    box.setAttribute("y", y);
+    box.setAttribute("rx", "8");
+    box.setAttribute("ry", "8");
+    box.setAttribute("width", boxW);
+    box.setAttribute("height", boxH);
+    box.setAttribute("class", "calloutBox");
+    g.appendChild(box);
+
+    const tail = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    tail.setAttribute("d", `M ${x + 26} ${y + boxH} L ${x + 42} ${y + boxH} L ${p.x} ${p.y - 6} Z`);
+    tail.setAttribute("class", "calloutTail");
+    g.appendChild(tail);
+
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    text.setAttribute("x", x + 10);
+    text.setAttribute("y", y + 16);
+    text.setAttribute("class", "calloutText");
+    lines.forEach((ln, i) => {
+      const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+      tspan.setAttribute("x", x + 10);
+      tspan.setAttribute("dy", i === 0 ? "0" : "16");
+      tspan.textContent = ln;
+      text.appendChild(tspan);
+    });
+    g.appendChild(text);
+
+    els.treeSvg.appendChild(g);
+  }
+
+  function renderHeapRow(heapIds, selectedSet = new Set(), newNodeId = null){
+    els.heapRow.innerHTML = "";
+    if (!heapIds.length){
+      const d = document.createElement("div");
+      d.className = "mini";
+      d.textContent = "Queue is empty.";
+      els.heapRow.appendChild(d);
+      return;
+    }
+
+    heapIds.forEach((id, idx) => {
+      const n = allNodes[id];
+      const cell = document.createElement("div");
+      cell.className = "heapCell";
+      if (selectedSet.has(id) && idx < 2) cell.classList.add("min");
+      if (id === newNodeId) cell.classList.add("new");
+      if (guidedMode && selectedSet.has(id)) cell.classList.add("focus");
+      cell.textContent = `${idx}: ${n.char ? n.char : "*"}(${n.freq})`;
+      els.heapRow.appendChild(cell);
+    });
+  }
+
+  function setGuideNotes(st){
+    els.heapGuideNote.classList.remove("show");
+    els.ioGuideNote.classList.remove("show");
+    els.heapGuideNote.textContent = "";
+    els.ioGuideNote.textContent = "";
+    if (!guidedMode || !st) return;
+
+    if (st.focus === "heap"){
+      els.heapGuideNote.textContent = st.comment;
+      els.heapGuideNote.classList.add("show");
+    } else if (st.focus === "io"){
+      const extras = Object.keys(codeMap).length ? `\nCodes: ${formatCodes()}` : "";
+      els.ioGuideNote.textContent = `${st.comment}${extras}`;
+      els.ioGuideNote.classList.add("show");
+    }
+  }
+
+  function applyCurrent(){
+    const st = steps[stepIndex] || null;
+    const total = steps.length ? steps.length : 0;
+    const curr = st ? stepIndex + 1 : 0;
+    els.stepCount.textContent = `${curr} / ${total}`;
+
+    if (st){
+      els.extractCount.textContent = st.extractOps;
+      els.insertCount.textContent = st.insertOps;
+      els.mergeCount.textContent = st.mergeOps;
+      els.cmpCount.textContent = st.cmpOps;
+      els.explain.textContent = guidedMode ? guideNarration(st) : st.explain;
+      renderPseudo(st.line);
+      captureHistory(st);
+    } else {
+      els.extractCount.textContent = "0";
+      els.insertCount.textContent = "0";
+      els.mergeCount.textContent = "0";
+      els.cmpCount.textContent = "0";
+      els.explain.textContent = "Build steps to begin tracing Huffman coding.";
+      renderPseudo(null);
+    }
+
+    draw();
+    renderHistory();
+  }
+
+  function captureHistory(st){
+    if (!st) return;
+    const last = history[history.length - 1];
+    if (last && last.stepIndex === stepIndex) return;
+    history.push({
+      stepIndex,
+      action: st.action,
+      explain: st.explain,
+      heapText: st.heapIds.map(id => labelOf(allNodes, id)).join(" -> ")
+    });
+    if (history.length > 25) history.shift();
+  }
+
+  function renderHistory(){
+    els.histBody.innerHTML = "";
+    history.forEach(h => {
+      const tr = document.createElement("tr");
+      if (h.stepIndex === stepIndex) tr.className = "active";
+      tr.innerHTML = `<td>${h.stepIndex + 1}</td><td>${h.action}</td><td>${h.heapText}</td><td>${h.explain}</td>`;
+      tr.addEventListener("click", () => {
+        pause();
+        stepIndex = h.stepIndex;
+        setStatus("Paused");
+        applyCurrent();
+      });
+      els.histBody.appendChild(tr);
+    });
+  }
+
+  function buildCodeMap(){
+    codeMap = {};
+    if (!rootId) return;
+
+    const dfs = (id, bits) => {
+      const n = allNodes[id];
+      if (!n) return;
+      if (!n.left && !n.right){
+        codeMap[n.char] = bits || "0";
+        return;
+      }
+      if (n.left) dfs(n.left, bits + "0");
+      if (n.right) dfs(n.right, bits + "1");
+    };
+
+    dfs(rootId, "");
+  }
+
+  function formatCodes(){
+    const keys = Object.keys(codeMap).sort();
+    if (!keys.length) return "Build the tree first.";
+    return keys.map(k => `${k}: ${codeMap[k]}`).join(" | ");
+  }
+
+  function encodeText(){
+    if (!Object.keys(codeMap).length){
+      els.encodedOut.textContent = "Build tree first to get valid Huffman codes.";
+      return;
+    }
+    const txt = (els.encodeInput.value || "").trim();
+    if (!txt){
+      els.encodedOut.textContent = "Type text to encode.";
+      return;
+    }
+
+    let bits = "";
+    for (const ch of txt){
+      if (!codeMap[ch]){
+        els.encodedOut.textContent = `Unknown symbol '${ch}'. Available: ${Object.keys(codeMap).join(", ")}`;
+        return;
+      }
+      bits += codeMap[ch];
+    }
+
+    els.encodedOut.textContent = `Codes: ${formatCodes()}\nEncoded: ${bits}`;
+    els.decodeInput.value = bits;
+    if (guidedMode){
+      els.ioGuideNote.textContent = `Encoded each input symbol using the generated code table.\nText '${txt}' became ${bits.length} bits.`;
+      els.ioGuideNote.classList.add("show");
+    }
+  }
+
+  function decodeBits(){
+    if (!rootId){
+      els.decodedOut.textContent = "Build tree first.";
+      return;
+    }
+    const bits = (els.decodeInput.value || "").trim();
+    if (!bits){
+      els.decodedOut.textContent = "Type bit-string to decode.";
+      return;
+    }
+
+    let out = "";
+    let cur = rootId;
+    for (const b of bits){
+      if (b !== "0" && b !== "1"){
+        els.decodedOut.textContent = "Bit-string must contain only 0 and 1.";
+        return;
+      }
+      const node = allNodes[cur];
+      cur = b === "0" ? node.left : node.right;
+      if (!cur){
+        els.decodedOut.textContent = "Invalid bit path for current tree.";
+        return;
+      }
+      const nx = allNodes[cur];
+      if (!nx.left && !nx.right){
+        out += nx.char;
+        cur = rootId;
+      }
+    }
+
+    if (cur !== rootId){
+      els.decodedOut.textContent = `Partial decode: ${out} (remaining bits do not end at leaf).`;
+      return;
+    }
+
+    els.decodedOut.textContent = `Decoded: ${out}`;
+    if (guidedMode){
+      els.ioGuideNote.textContent = `Decoded by walking the tree from root for each bit until hitting leaf nodes.`;
+      els.ioGuideNote.classList.add("show");
+    }
+  }
+
+  function compressLength(symList, map){
+    const freq = Object.fromEntries(symList.map(s => [s.char, s.freq]));
+    let total = 0;
+    for (const k of Object.keys(map)){
+      total += (freq[k] || 0) * map[k].length;
+    }
+    return total;
+  }
+
+  function buildCodeMapFrom(root, nodes){
+    const m = {};
+    const dfs = (id, bits) => {
+      const n = nodes[id];
+      if (!n.left && !n.right){
+        m[n.char] = bits || "0";
+        return;
+      }
+      if (n.left) dfs(n.left, bits + "0");
+      if (n.right) dfs(n.right, bits + "1");
+    };
+    if (root) dfs(root, "");
+    return m;
+  }
+
+  function randomSymbols(n){
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const arr = [];
+    for (let i=0;i<n;i++){
+      arr.push({ char: letters[i] || `X${i}`, freq: 1 + Math.floor((Math.sin((i+1)*2.2) + 1) * 15) + (i % 4) });
+    }
+    return arr;
+  }
+
+  function drawGrowth(){
+    const svg = els.growthSvg;
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const pointsActual = [];
+    const pointsTheo = [];
+    const pointsFixed = [];
+    let maxY = 1;
+
+    for (let n=4;n<=22;n++){
+      const input = randomSymbols(n);
+      const r = buildSteps(input, true);
+      const end = r.steps[r.steps.length - 1];
+      const actual = end ? (end.extractOps + end.insertOps + end.cmpOps) : 0;
+      const theo = Math.round(n * Math.log2(n) * 2.6);
+      const fixed = n * Math.ceil(Math.log2(n));
+      maxY = Math.max(maxY, actual, theo, fixed);
+      pointsActual.push({ n, y: actual });
+      pointsTheo.push({ n, y: theo });
+      pointsFixed.push({ n, y: fixed });
+    }
+
+    const W = 760;
+    const H = 220;
+    const pad = { l:44, r:12, t:16, b:28 };
+    const xMin = 4;
+    const xMax = 22;
+
+    const X = n => pad.l + ((n - xMin) / (xMax - xMin)) * (W - pad.l - pad.r);
+    const Y = y => H - pad.b - (y / maxY) * (H - pad.t - pad.b);
+
+    const addLine = (x1,y1,x2,y2,stroke,w,dash) => {
+      const line = document.createElementNS("http://www.w3.org/2000/svg","line");
+      line.setAttribute("x1", x1);
+      line.setAttribute("y1", y1);
+      line.setAttribute("x2", x2);
+      line.setAttribute("y2", y2);
+      line.setAttribute("stroke", stroke);
+      line.setAttribute("stroke-width", w);
+      if (dash) line.setAttribute("stroke-dasharray", dash);
+      svg.appendChild(line);
+    };
+
+    addLine(pad.l, pad.t, pad.l, H - pad.b, "rgba(255,255,255,0.3)", 1.2);
+    addLine(pad.l, H - pad.b, W - pad.r, H - pad.b, "rgba(255,255,255,0.3)", 1.2);
+
+    function pathOf(arr){
+      return arr.map((p,i) => `${i===0?"M":"L"}${X(p.n)} ${Y(p.y)}`).join(" ");
+    }
+
+    const p1 = document.createElementNS("http://www.w3.org/2000/svg","path");
+    p1.setAttribute("d", pathOf(pointsActual));
+    p1.setAttribute("fill","none");
+    p1.setAttribute("stroke", "#6aa9ff");
+    p1.setAttribute("stroke-width", "2.4");
+    svg.appendChild(p1);
+
+    const p2 = document.createElementNS("http://www.w3.org/2000/svg","path");
+    p2.setAttribute("d", pathOf(pointsTheo));
+    p2.setAttribute("fill","none");
+    p2.setAttribute("stroke", "#55d39a");
+    p2.setAttribute("stroke-width", "2");
+    p2.setAttribute("stroke-dasharray", "5 4");
+    svg.appendChild(p2);
+
+    const p3 = document.createElementNS("http://www.w3.org/2000/svg","path");
+    p3.setAttribute("d", pathOf(pointsFixed));
+    p3.setAttribute("fill","none");
+    p3.setAttribute("stroke", "#ffd166");
+    p3.setAttribute("stroke-width", "2");
+    svg.appendChild(p3);
+
+    for (let n=4;n<=22;n+=3){
+      const tx = document.createElementNS("http://www.w3.org/2000/svg","text");
+      tx.setAttribute("x", X(n));
+      tx.setAttribute("y", H - 10);
+      tx.setAttribute("fill", "#aec3e8");
+      tx.setAttribute("font-size", "10");
+      tx.setAttribute("text-anchor", "middle");
+      tx.textContent = n;
+      svg.appendChild(tx);
+    }
+
+    const ly = 20;
+    const legend = [
+      ["actual operations", "#6aa9ff"],
+      ["k * n log2(n)", "#55d39a"],
+      ["fixed-length baseline", "#ffd166"]
+    ];
+    legend.forEach((it,i) => {
+      const x = 56 + i * 210;
+      addLine(x, ly, x + 22, ly, it[1], 2.5, i===1?"4 3":null);
+      const t = document.createElementNS("http://www.w3.org/2000/svg","text");
+      t.setAttribute("x", x + 27);
+      t.setAttribute("y", ly + 4);
+      t.setAttribute("fill", "#d4e2ff");
+      t.setAttribute("font-size", "11");
+      t.textContent = it[0];
+      svg.appendChild(t);
+    });
+  }
+
+  function impactComparison(){
+    const input = symbols.slice();
+    if (!input.length){
+      els.impactOut.textContent = "Need valid symbols first.";
+      return;
+    }
+
+    const good = buildSteps(input, true);
+    const goodMap = buildCodeMapFrom(good.rootId, good.nodes);
+    const goodBits = compressLength(input, goodMap);
+
+    const bad = buildSteps(input, false);
+    const badMap = buildCodeMapFrom(bad.rootId, bad.nodes);
+    const badBits = compressLength(input, badMap);
+
+    const better = badBits - goodBits;
+    els.impactOut.textContent = [
+      `With min-heap (search for minimum each round): total weighted bits = ${goodBits}`,
+      `Without min-heap ordering (FIFO merge): total weighted bits = ${badBits}`,
+      better > 0 ? `Impact: min-heap saves ${better} bits for this distribution.` : `Impact: no improvement for this specific input (rare edge case).`
+    ].join("\n");
+  }
+
+  function greedyDemo(){
+    const input = symbols.slice();
+    if (!input.length){
+      els.greedyOut.textContent = "Need valid symbols first.";
+      return;
+    }
+
+    const greedy = buildSteps(input, true);
+    const gMap = buildCodeMapFrom(greedy.rootId, greedy.nodes);
+    const gBits = compressLength(input, gMap);
+
+    const nodes = {};
+    let c = 0;
+    const q = [];
+    input.forEach(s => {
+      const id = `b${++c}`;
+      nodes[id] = { id, char: s.char, freq: s.freq, left: null, right: null };
+      q.push(id);
+    });
+
+    while (q.length > 1){
+      q.sort((a,b) => nodes[b].freq - nodes[a].freq);
+      const x = q.shift();
+      const y = q.shift();
+      const z = `b${++c}`;
+      nodes[z] = { id:z, char:null, freq:nodes[x].freq + nodes[y].freq, left:x, right:y };
+      q.push(z);
+    }
+
+    const badRoot = q[0];
+    const bMap = buildCodeMapFrom(badRoot, nodes);
+    const bBits = compressLength(input, bMap);
+
+    els.greedyOut.textContent = [
+      `Greedy Huffman (two smallest merge first): ${gBits} weighted bits`,
+      `Bad strategy (two largest merge first): ${bBits} weighted bits`,
+      bBits >= gBits ? `Result: greedy is better by ${bBits - gBits} bits.` : "Unexpected inversion for this input; try another preset."
+    ].join("\n");
+  }
+
+  function reset(keepBuilt = false){
+    pause();
+    guidedMode = false;
+    stepIndex = 0;
+    history = [];
+    prevNodePos = {};
+    if (!keepBuilt){
+      steps = [];
+      allNodes = {};
+      rootId = null;
+      codeMap = {};
+      setStatus("Idle");
+    } else {
+      setStatus("Ready");
+    }
+    applyCurrent();
+  }
+
+  function build(){
+    const parsed = parseInput(els.freqInput.value);
+    if (parsed.length < 2){
+      setStatus("Idle");
+      els.explain.textContent = "Please provide at least 2 valid symbol:frequency pairs.";
+      return;
+    }
+
+    symbols = scaleFromSlider(parsed);
+    const disable = !!els.disableHeap.checked;
+    const result = buildSteps(symbols, !disable);
+    allNodes = result.nodes;
+    steps = result.steps;
+    rootId = result.rootId;
+    stepIndex = 0;
+    history = [];
+    buildCodeMap();
+    drawGrowth();
+    setStatus("Ready");
+    applyCurrent();
+  }
+
+  function stepOnce(){
+    guidedMode = false;
+    if (!steps.length){ build(); }
+    if (!steps.length) return;
+    if (stepIndex >= steps.length - 1){
+      setStatus("Done");
+      applyCurrent();
+      return;
+    }
+    stepIndex += 1;
+    setStatus("Paused");
+    applyCurrent();
+  }
+
+  async function play(){
+    guidedMode = false;
+    if (!steps.length){ build(); }
+    if (!steps.length) return;
+    playing = true;
+    const t = ++playToken;
+    setStatus("Playing");
+
+    while (playing && t === playToken && stepIndex < steps.length - 1){
+      stepIndex += 1;
+      applyCurrent();
+      const v = Number(els.speed.value) || 1;
+      await sleep(Math.max(50, Math.floor(310 / v)));
+    }
+
+    if (stepIndex >= steps.length - 1){
+      setStatus("Done");
+    }
+  }
+
+  function pause(){
+    playing = false;
+    playToken += 1;
+    if (steps.length && stepIndex < steps.length - 1){ setStatus("Paused"); }
+  }
+
+  function setPreset(v){
+    els.freqInput.value = v;
+    reset(false);
+    build();
+  }
+
+  function startGuided(){
+    if (!steps.length) build();
+    if (!steps.length) return;
+    pause();
+    guidedMode = true;
+    stepIndex = 0;
+    setStatus("Guided");
+    applyCurrent();
+  }
+
+  function nextGuided(){
+    if (!steps.length){
+      startGuided();
+      return;
+    }
+    if (!guidedMode){
+      guidedMode = true;
+      setStatus("Guided");
+      applyCurrent();
+      return;
+    }
+    if (stepIndex >= steps.length - 1){
+      setStatus("Done");
+      return;
+    }
+    stepIndex += 1;
+    setStatus("Guided");
+    applyCurrent();
+  }
+
+  function stopGuided(){
+    guidedMode = false;
+    if (steps.length && stepIndex < steps.length - 1) setStatus("Paused");
+    setGuideNotes(null);
+    applyCurrent();
+  }
+
+  function init(){
+    renderPseudo(null);
+    drawGrowth();
+    applyCurrent();
+
+    els.speed.addEventListener("input", () => {
+      els.speedLabel.textContent = `${Number(els.speed.value).toFixed(2)}x`;
+    });
+
+    els.build.addEventListener("click", build);
+    els.step.addEventListener("click", stepOnce);
+    els.play.addEventListener("click", play);
+    els.pause.addEventListener("click", pause);
+    els.reset.addEventListener("click", () => reset(true));
+    els.guideStart.addEventListener("click", startGuided);
+    els.guideNext.addEventListener("click", nextGuided);
+    els.guideStop.addEventListener("click", stopGuided);
+
+    els.encodeBtn.addEventListener("click", encodeText);
+    els.decodeBtn.addEventListener("click", decodeBits);
+
+    els.preset1.addEventListener("click", () => setPreset("A:5,B:9,C:12,D:13,E:16,F:45"));
+    els.preset2.addEventListener("click", () => setPreset("A:10,B:10,C:10,D:10,E:10,F:10"));
+    els.preset3.addEventListener("click", () => setPreset("A:1,B:1,C:2,D:3,E:5,F:8,G:13"));
+
+    els.nScale.addEventListener("change", build);
+    els.disableHeap.addEventListener("change", build);
+
+    els.impactBtn.addEventListener("click", impactComparison);
+    els.greedyBtn.addEventListener("click", greedyDemo);
+
+    build();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
